@@ -62,6 +62,35 @@ async function handleCheckoutCompleted(session, db, s) {
     );
   }
 
+  // Create coverage zone if provided during signup
+  try {
+    const coverageMeta = session.metadata?.coverage;
+    if (coverageMeta) {
+      const cov = JSON.parse(coverageMeta);
+      if (cov.address) {
+        const encoded = encodeURIComponent(`${cov.address}, New Jersey`);
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1&countrycodes=us`,
+          { headers: { "User-Agent": "Pipeline-LandUseAlert/1.0 (alerts@landusealert.com)" } }
+        );
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData.length > 0) {
+            await db.from("pro_coverage").insert({
+              pro_account_id: accountId,
+              label: cov.address,
+              center_lat: parseFloat(geoData[0].lat),
+              center_lng: parseFloat(geoData[0].lon),
+              radius_miles: cov.radius_miles || 15,
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("webhook: coverage geocode failed:", e.message);
+  }
+
   // Default email settings
   await db.from("pro_email_settings").upsert(
     { pro_account_id: accountId, frequency: "weekly", board_types: ["planning", "zoning", "council"], send_day: "monday" },

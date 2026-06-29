@@ -168,7 +168,7 @@ export default function Settings() {
   return (
     <>
       <Head>
-        <title>Settings — Townhall Café Pro</title>
+        <title>Settings — Pipeline</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
       </Head>
@@ -176,7 +176,7 @@ export default function Settings() {
 
       <div className="layout">
         <nav className="sidebar">
-          <div className="sidebar-brand"><span>Townhall</span> Café Pro</div>
+          <div className="sidebar-brand"><span>Pipeline</span></div>
           <Link href="/dashboard" className="nav-item">
             <span className="nav-icon">🏠</span> Dashboard
           </Link>

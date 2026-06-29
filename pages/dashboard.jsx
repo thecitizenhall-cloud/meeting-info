@@ -189,7 +189,7 @@ export default function Dashboard() {
   return (
     <>
       <Head>
-        <title>Dashboard — Townhall Café Pro</title>
+        <title>Dashboard — Pipeline</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
       </Head>
@@ -198,12 +198,12 @@ export default function Dashboard() {
       <div className="layout">
         {/* Sidebar */}
         <nav className="sidebar">
-          <div className="sidebar-brand"><span>Townhall</span> Café Pro</div>
+          <div className="sidebar-brand"><span>Pipeline</span></div>
           <Link href="/dashboard" className="nav-item active">
             <span className="nav-icon">🏠</span> Dashboard
           </Link>
           <Link href="/settings" className="nav-item">
-            <span className="nav-icon">⚙️</span> Email settings
+            <span className="nav-icon">⚙️</span> Settings
           </Link>
           <div className="sidebar-footer">
             <button className="logout-btn" onClick={logout}>
@@ -233,7 +233,7 @@ export default function Dashboard() {
                 <div className="welcome-banner">
                   <div className="welcome-text">
                     <strong style={{ display: "block", marginBottom: "4px" }}>Welcome, {data?.account?.name?.split(" ")[0]}!</strong>
-                    Your account is active. Your first land-use digest will arrive on your next scheduled send date.
+                    Your account is active. Your first Pipeline digest arrives on your next scheduled send. Set your coverage radius in Settings to filter alerts to your market area.
                   </div>
                   <button className="dismiss-btn" onClick={() => setShowWelcome(false)}>×</button>
                 </div>

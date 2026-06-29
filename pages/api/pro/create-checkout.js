@@ -15,7 +15,7 @@ function stripe() {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { name, company, email, townships } = req.body || {};
+  const { name, company, email, townships, coverage_address, coverage_radius_miles } = req.body || {};
   const cleanEmail = String(email || "").trim().toLowerCase();
   const cleanName = String(name || "").trim();
   const cleanCompany = String(company || "").trim() || null;
@@ -68,6 +68,11 @@ export default async function handler(req, res) {
       accountId = data.id;
     }
 
+    // Store coverage intent in metadata so webhook can create pro_coverage row
+    const coverageMeta = coverage_address
+      ? JSON.stringify({ address: String(coverage_address).slice(0, 200), radius_miles: coverage_radius_miles || 15 })
+      : null;
+
     const townshipsMeta = JSON.stringify(
       townships.slice(0, 20).map(t => ({ key: String(t.key).slice(0, 64), name: String(t.name).slice(0, 128) }))
     );
@@ -80,8 +85,8 @@ export default async function handler(req, res) {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: townships.length }],
-      metadata: { pro_account_id: accountId, townships: townshipsMeta },
-      subscription_data: { metadata: { pro_account_id: accountId, townships: townshipsMeta } },
+      metadata: { pro_account_id: accountId, townships: townshipsMeta, coverage: coverageMeta },
+      subscription_data: { metadata: { pro_account_id: accountId, townships: townshipsMeta, coverage: coverageMeta } },
       success_url: `${SITE}/dashboard?welcome=1`,
       cancel_url: `${SITE}/signup?canceled=1`,
     });

@@ -18,6 +18,11 @@ dist/
 *.log
 npm-debug.log*
 
+# local strategy docs
+thoughts
+STRATEGY.md
+POSITION.md
+
 # OS
 .DS_Store
 Thumbs.db
