@@ -91,6 +91,18 @@ const css = `
   .portal-btn { background:${C.surface}; border:1px solid ${C.border}; color:${C.text}; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:border-color 0.12s; }
   .portal-btn:hover { border-color:${C.blue}; }
 
+  /* Coverage zones */
+  .cov-list { display:flex; flex-direction:column; gap:10px; }
+  .cov-row { background:${C.surface}; border:1px solid ${C.border}; border-radius:10px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .cov-label { font-size:14px; color:${C.text}; font-weight:500; }
+  .cov-meta { font-size:12px; color:${C.dim}; margin-top:2px; }
+  .cov-empty { font-size:13px; color:${C.faint}; padding:14px 18px; background:${C.surface}; border:1px dashed ${C.border}; border-radius:10px; }
+
+  /* Coverage modal extras */
+  .range-row { display:flex; align-items:center; gap:12px; margin-top:8px; }
+  .range-val { font-size:14px; color:${C.blueHi}; font-weight:600; min-width:48px; text-align:right; }
+  input[type=range] { flex:1; accent-color:${C.blue}; }
+
   /* Loading */
   .loading { display:flex; align-items:center; justify-content:center; min-height:200px; color:${C.dim}; font-size:14px; }
 
@@ -120,6 +132,11 @@ export default function Dashboard() {
   const [addLoading, setAddLoading] = useState(false);
   const [removeLoading, setRemoveLoading] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [coverage, setCoverage] = useState([]);
+  const [showCovModal, setShowCovModal] = useState(false);
+  const [covForm, setCovForm] = useState({ address: "", radius_miles: 15 });
+  const [covLoading, setCovLoading] = useState(false);
+  const [removeCovLoading, setRemoveCovLoading] = useState(null);
 
   async function load() {
     try {
@@ -131,8 +148,47 @@ export default function Dashboard() {
     setLoading(false);
   }
 
+  async function loadCoverage() {
+    try {
+      const r = await fetch("/api/pro/coverage");
+      if (r.ok) setCoverage((await r.json()).zones || []);
+    } catch {}
+  }
+
+  async function addCoverage() {
+    if (!covForm.address.trim()) return;
+    setCovLoading(true);
+    try {
+      const r = await fetch("/api/pro/coverage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: covForm.address.trim(), radius_miles: covForm.radius_miles }),
+      });
+      if (r.ok) {
+        await loadCoverage();
+        setShowCovModal(false);
+        setCovForm({ address: "", radius_miles: 15 });
+      }
+    } catch {}
+    setCovLoading(false);
+  }
+
+  async function removeCoverage(id) {
+    setRemoveCovLoading(id);
+    try {
+      await fetch("/api/pro/coverage", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      await loadCoverage();
+    } catch {}
+    setRemoveCovLoading(null);
+  }
+
   useEffect(() => {
     load();
+    loadCoverage();
     if (welcome === "1") setShowWelcome(true);
   }, []);
 
@@ -268,6 +324,37 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Coverage zones */}
+              <div className="section-mb">
+                <div className="section-header">
+                  <span className="section-title">Market coverage</span>
+                  <button
+                    onClick={() => setShowCovModal(true)}
+                    style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: "6px", fontSize: "12px", color: C.dim, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit" }}
+                  >+ Add zone</button>
+                </div>
+                <div className="cov-list">
+                  {coverage.length === 0 && (
+                    <div className="cov-empty">No coverage zones — alerts are sent for all activity in your monitored townships.<br />Add a zone to filter to your market radius.</div>
+                  )}
+                  {coverage.map(z => (
+                    <div key={z.id} className="cov-row">
+                      <div>
+                        <div className="cov-label">{z.label || "Coverage zone"}</div>
+                        <div className="cov-meta">
+                          {z.center_lat ? `${z.radius_miles} mi radius · ${parseFloat(z.center_lat).toFixed(4)}, ${parseFloat(z.center_lng).toFixed(4)}` : z.zip_codes?.join(", ")}
+                        </div>
+                      </div>
+                      <button
+                        className="remove-btn"
+                        onClick={() => removeCoverage(z.id)}
+                        disabled={removeCovLoading === z.id}
+                      >{removeCovLoading === z.id ? "Removing…" : "Remove"}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Billing */}
               <div className="section-mb">
                 <div className="section-header">
@@ -303,6 +390,47 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Coverage zone modal */}
+      {showCovModal && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowCovModal(false)}>
+          <div className="modal">
+            <div className="modal-title">Add market coverage zone</div>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: C.dim, marginBottom: "8px" }}>
+                Center address
+              </label>
+              <input
+                type="text"
+                value={covForm.address}
+                onChange={e => setCovForm(f => ({ ...f, address: e.target.value }))}
+                placeholder="123 Main St, Jackson, NJ"
+                style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: "8px", color: C.text, fontFamily: "inherit", fontSize: "14px", padding: "10px 14px", outline: "none", width: "100%" }}
+                onKeyDown={e => e.key === "Enter" && addCoverage()}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: C.dim, marginBottom: "8px" }}>
+                Radius
+              </label>
+              <div className="range-row">
+                <input
+                  type="range" min="1" max="50" step="1"
+                  value={covForm.radius_miles}
+                  onChange={e => setCovForm(f => ({ ...f, radius_miles: parseInt(e.target.value) }))}
+                />
+                <span className="range-val">{covForm.radius_miles} mi</span>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="modal-cancel" onClick={() => { setShowCovModal(false); setCovForm({ address: "", radius_miles: 15 }); }}>Cancel</button>
+              <button className="modal-confirm" onClick={addCoverage} disabled={!covForm.address.trim() || covLoading}>
+                {covLoading ? "Geocoding…" : "Add zone"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add township modal */}
       {showAddModal && (
